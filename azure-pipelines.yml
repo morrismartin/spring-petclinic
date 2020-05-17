@@ -9,7 +9,7 @@ trigger:
 variables:
   
     # Azure Resource Manager connection created during pipeline creation
-    azureSubscription: '2b8d3a3c-d633-48c4-90d0-464f046c4873'
+    azureSubscription: '0aafa1f8-e262-46c8-9eee-fe2de3dd59b2'
     
     # Web app name
     webAppName: 'springpet-clinic-javase8-mmb'
