@@ -7,15 +7,15 @@ trigger:
   - CICDTomcatAppService
   
 variables:
-
+  
     # Azure Resource Manager connection created during pipeline creation
-    azureSubscription: '0aafa1f8-e262-46c8-9eee-fe2de3dd59b2'
+    azureSubscription: '2b8d3a3c-d633-48c4-90d0-464f046c4873'
     
     # Web app name
-    webAppName: ''
+    webAppName: 'springpet-clinic-javase8-mmb'
   
     # Environment name
-    environmentName: ''
+    environmentName: 'springpet-clinic-javase8-mmb'
     
     # Agent VM image name
     vmImageName: 'ubuntu-latest'
@@ -45,25 +45,81 @@ stages:
       - upload: $(Build.ArtifactStagingDirectory)
         artifact: drop
   
-  - stage: Deploy
-    displayName: Deploy stage
+  - stage: dev
+    displayName: Deploy to dev environment
     dependsOn: Build
     condition: succeeded()
     jobs:
     - deployment: DeployLinuxWebApp
       displayName: Deploy Linux Web App
-      environment: $(environmentName)
       pool: 
         vmImage: $(vmImageName)
+      environment: dev
+      variables:
+        - group: Release
       strategy:
         runOnce:
           deploy:
             steps:
+            - download: current
+              artifact: drop
             - task: AzureWebApp@1
-              displayName: 'Azure Web App Deploy: '
+              displayName: 'Azure Web App Deploy: springpet-clinic-javase8'
               inputs:
                 azureSubscription: $(azureSubscription)
                 appType: webAppLinux
-                appName: $(webAppName)
+                appName: '$(WebAppDev)'
                 package: '$(Pipeline.Workspace)/drop/**/target/*.?(war|jar)'
   
+  - stage: test
+    displayName: Deploy to test environment
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+    - deployment: DeployLinuxWebApp
+      displayName: Deploy Linux Web App
+      pool: 
+        vmImage: $(vmImageName)
+      environment: test
+      variables:
+        - group: Release
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - download: current
+              artifact: drop
+            - task: AzureWebApp@1
+              displayName: 'Azure Web App Deploy: springpet-clinic-javase8'
+              inputs:
+                azureSubscription: $(azureSubscription)
+                appType: webAppLinux
+                appName: '$(WebAppTest)'
+                package: '$(Pipeline.Workspace)/drop/**/target/*.?(war|jar)'
+  
+                
+  - stage: staging
+    displayName: Deploy to staging environment
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+    - deployment: DeployLinuxWebApp
+      displayName: Deploy Linux Web App
+      pool: 
+        vmImage: $(vmImageName)
+      environment: staging
+      variables:
+        - group: 'Release'
+      strategy:
+          runOnce:
+            deploy:
+              steps:
+              - download: current
+                artifact: drop
+              - task: AzureWebApp@1
+                displayName: 'Azure Web App Deploy: springpet-clinic-javase8'
+                inputs:
+                  azureSubscription: $(azureSubscription)
+                  appType: webAppLinux
+                  appName: '$(WebAppStaging)'
+                  package: '$(Pipeline.Workspace)/drop/**/target/*.?(war|jar)'
