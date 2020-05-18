@@ -11,12 +11,6 @@ variables:
     # Azure Resource Manager connection created during pipeline creation
     azureSubscription: '0aafa1f8-e262-46c8-9eee-fe2de3dd59b2'
     
-    # Web app name
-    webAppName: 'springpet-clinic-javase8-mmb'
-  
-    # Environment name
-    environmentName: 'springpet-clinic-javase8-mmb'
-    
     # Agent VM image name
     vmImageName: 'ubuntu-latest'
   
@@ -64,7 +58,7 @@ stages:
             - download: current
               artifact: drop
             - task: AzureWebApp@1
-              displayName: 'Azure Web App Deploy: springpet-clinic-javase8'
+              displayName: 'Azure Web App Deploy: springpet-clinic-tomcat-dev'
               inputs:
                 azureSubscription: $(azureSubscription)
                 appType: webAppLinux
@@ -90,14 +84,13 @@ stages:
             - download: current
               artifact: drop
             - task: AzureWebApp@1
-              displayName: 'Azure Web App Deploy: springpet-clinic-javase8'
+              displayName: 'Azure Web App Deploy: springpet-clinic-tomcat-test'
               inputs:
                 azureSubscription: $(azureSubscription)
                 appType: webAppLinux
                 appName: '$(WebAppTest)'
                 package: '$(Pipeline.Workspace)/drop/**/target/*.?(war|jar)'
-  
-                
+          
   - stage: staging
     displayName: Deploy to staging environment
     dependsOn: Build
@@ -117,7 +110,7 @@ stages:
               - download: current
                 artifact: drop
               - task: AzureWebApp@1
-                displayName: 'Azure Web App Deploy: springpet-clinic-javase8'
+                displayName: 'Azure Web App Deploy: springpet-clinic-tomcat-staging'
                 inputs:
                   azureSubscription: $(azureSubscription)
                   appType: webAppLinux
