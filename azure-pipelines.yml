@@ -1,0 +1,118 @@
+# Maven package Java project Web App to Linux on Azure
+# Build your Java project and deploy it to Azure as a Linux web app
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+trigger:
+  - CICDTomcatAppService
+  
+variables:
+  
+    # Azure Resource Manager connection created during pipeline creation
+    azureSubscription: '0aafa1f8-e262-46c8-9eee-fe2de3dd59b2'
+    
+    # Agent VM image name
+    vmImageName: 'ubuntu-latest'
+  
+stages:
+  - stage: Build
+    displayName: Build stage
+    jobs:
+    - job: MavenPackageAndPublishArtifacts
+      displayName: Maven Package and Publish Artifacts
+      pool:
+        vmImage: $(vmImageName)
+      
+      steps:
+      - task: Maven@3
+        displayName: 'Maven Package'
+        inputs:
+          mavenPomFile: 'pom.xml'
+  
+      - task: CopyFiles@2
+        displayName: 'Copy Files to artifact staging directory'
+        inputs:
+          SourceFolder: '$(System.DefaultWorkingDirectory)'
+          Contents: '**/target/*.?(war|jar)'
+          TargetFolder: $(Build.ArtifactStagingDirectory)
+  
+      - upload: $(Build.ArtifactStagingDirectory)
+        artifact: drop
+  
+  - stage: dev
+    displayName: Deploy to dev environment
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+    - deployment: DeployLinuxWebApp
+      displayName: Deploy Linux Web App
+      pool: 
+        vmImage: $(vmImageName)
+      environment: dev
+      variables:
+        - group: Release
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - download: current
+              artifact: drop
+            - task: AzureWebApp@1
+              displayName: 'Azure Web App Deploy: springpet-clinic-tomcat-dev'
+              inputs:
+                azureSubscription: $(azureSubscription)
+                appType: webAppLinux
+                appName: '$(WebAppDev)'
+                package: '$(Pipeline.Workspace)/drop/**/target/*.?(war|jar)'
+  
+  - stage: test
+    displayName: Deploy to test environment
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+    - deployment: DeployLinuxWebApp
+      displayName: Deploy Linux Web App
+      pool: 
+        vmImage: $(vmImageName)
+      environment: test
+      variables:
+        - group: Release
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - download: current
+              artifact: drop
+            - task: AzureWebApp@1
+              displayName: 'Azure Web App Deploy: springpet-clinic-tomcat-test'
+              inputs:
+                azureSubscription: $(azureSubscription)
+                appType: webAppLinux
+                appName: '$(WebAppTest)'
+                package: '$(Pipeline.Workspace)/drop/**/target/*.?(war|jar)'
+          
+  - stage: staging
+    displayName: Deploy to staging environment
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+    - deployment: DeployLinuxWebApp
+      displayName: Deploy Linux Web App
+      pool: 
+        vmImage: $(vmImageName)
+      environment: staging
+      variables:
+        - group: 'Release'
+      strategy:
+          runOnce:
+            deploy:
+              steps:
+              - download: current
+                artifact: drop
+              - task: AzureWebApp@1
+                displayName: 'Azure Web App Deploy: springpet-clinic-tomcat-staging'
+                inputs:
+                  azureSubscription: $(azureSubscription)
+                  appType: webAppLinux
+                  appName: '$(WebAppStaging)'
+                  package: '$(Pipeline.Workspace)/drop/**/target/*.?(war|jar)'
